@@ -11,53 +11,64 @@ import CssBaseline from '@mui/material/CssBaseline';
 import coins from './coins.json';
 
 function App() {
-  const [names, setNames] = useState<string[]>([]);
+  const [allCoins, setAllCoins] = useState<{ name: string; coin: any }[]>([]);
   const [currentCoin, setCurrentCoin] = useState<string>('');
 
   useEffect(() => {
-    const filtered = coins.map((coin) => coin.name);
-    const unique = Array.from(new Set(filtered));
-    setNames(unique);
-  }, []);
+    const filtered = coins.reduce((acc: any, coin: any) => {
+      if (!acc[coin.name]) {
+        acc[coin.name] = coin.reward_unit;
+      }
+      return acc;
+    }, {});
+
+    const uniqueCoins = [];
+    for (const coin in filtered) {
+      const temp: any = {};
+      temp[coin] = filtered[coin];
+      uniqueCoins.push(temp);
+    }
+    const finalCoins = uniqueCoins.map((coin) => {
+      const [name, symbol] = Object.entries(coin)[0];
+      return { name, coin: symbol };
+    });
+    setAllCoins(finalCoins);
+  }, [setAllCoins]);
 
   async function submitHandler(event: React.SyntheticEvent) {
     event.preventDefault();
-    let data = new URLSearchParams(Object.entries(currentCoin)).toString();
-    const result = await fetch('https://cryptosolutions.herokuapp.com/coin', {
-      method: 'POST',
-      body: data,
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    });
-    const toJSON = await result.json();
-    await console.log(toJSON);
+    if (currentCoin) {
+      const data = new URLSearchParams(
+        Object.entries({ coin: currentCoin })
+      ).toString();
+      const result = await fetch('https://cryptosolutions.herokuapp.com/coin', {
+        method: 'POST',
+        body: data,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      });
+      const toJSON = await result.json();
+      console.log(toJSON);
+    }
   }
 
-  function inputChangeHandler(
-    event: React.ChangeEvent<HTMLInputElement>,
-    value: any
-  ) {
-    return setCurrentCoin(value);
-    // setCurrentCoin(event.target.value);
+  function inputChangeHandler(event: any, value: any) {
+    setCurrentCoin(value.coin);
   }
-
-  // function getLabelHandler(option: any) {
-  //   console.log(option.label);
-  // }
 
   return (
     <div className='App'>
       <form onSubmit={submitHandler}>
         <Autocomplete
-          options={names}
-          getOptionLabel={(option) => option}
-          onChange={(event: any, value: any) => setCurrentCoin(value)}
+          options={allCoins}
+          getOptionLabel={(option) => option.name}
+          onChange={inputChangeHandler}
           renderInput={(params) => <TextField {...params} label='coins' />}
         />
         <button type='submit'>submit</button>
-        <div>{currentCoin}</div>
       </form>
+      {/* <div>{currentCoin}</div> */}
     </div>
   );
 }
